@@ -1,68 +1,42 @@
-"use client";
-
-import { useMemo, useState } from "react";
-import { DateRange } from "react-day-picker";
-import { mockCalls, computeKpis } from "@/lib/mock-data";
-import { CallStatus, Sentiment } from "@/types";
+import { Suspense } from "react";
+import { Sentiment, CallStatus } from "@/types";
+import { getCalls, getKpis, getAgentNames, CallFilters } from "@/lib/data";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { FiltersBar } from "@/components/dashboard/filters-bar";
 import { DataTable } from "@/components/calls-table/data-table";
 import { columns } from "@/components/calls-table/columns";
 
-export default function DashboardPage() {
-  const [search, setSearch] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [sentiment, setSentiment] = useState<Sentiment | "all">("all");
-  const [agent, setAgent] = useState("all");
-  const [status, setStatus] = useState<CallStatus | "all">("all");
+function FiltersBarSkeleton() {
+  return <div className="h-10 w-full animate-pulse rounded bg-muted" />;
+}
 
-  const agents = useMemo(
-    () => Array.from(new Set(mockCalls.map((c) => c.agentName))).sort(),
-    []
-  );
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
 
-  const filteredCalls = useMemo(() => {
-    return mockCalls.filter((call) => {
-      // Search filter
-      if (search) {
-        const q = search.toLowerCase();
-        const searchable = [
-          call.agentName,
-          call.customerName,
-          call.customerId,
-          call.id,
-          ...call.topics,
-        ]
-          .join(" ")
-          .toLowerCase();
-        if (!searchable.includes(q)) return false;
-      }
+  const filters: CallFilters = {
+    search: typeof params.search === "string" ? params.search : undefined,
+    dateFrom: typeof params.dateFrom === "string" ? params.dateFrom : undefined,
+    dateTo: typeof params.dateTo === "string" ? params.dateTo : undefined,
+    sentiment:
+      typeof params.sentiment === "string"
+        ? (params.sentiment as Sentiment | "all")
+        : undefined,
+    agent: typeof params.agent === "string" ? params.agent : undefined,
+    status:
+      typeof params.status === "string"
+        ? (params.status as CallStatus | "all")
+        : undefined,
+  };
 
-      // Date range filter
-      if (dateRange?.from) {
-        const callDate = new Date(call.dateTime);
-        if (callDate < dateRange.from) return false;
-        if (dateRange.to) {
-          const endOfDay = new Date(dateRange.to);
-          endOfDay.setHours(23, 59, 59, 999);
-          if (callDate > endOfDay) return false;
-        }
-      }
-
-      // Sentiment filter
-      if (sentiment !== "all" && call.sentiment !== sentiment) return false;
-
-      // Agent filter
-      if (agent !== "all" && call.agentName !== agent) return false;
-
-      // Status filter
-      if (status !== "all" && call.status !== status) return false;
-
-      return true;
-    });
-  }, [search, dateRange, sentiment, agent, status]);
-
-  const kpis = useMemo(() => computeKpis(filteredCalls), [filteredCalls]);
+  const [calls, kpis, agents] = await Promise.all([
+    getCalls(filters),
+    getKpis(filters),
+    getAgentNames(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -75,21 +49,11 @@ export default function DashboardPage() {
 
       <KpiCards data={kpis} />
 
-      <FiltersBar
-        search={search}
-        onSearchChange={setSearch}
-        dateRange={dateRange}
-        onDateRangeChange={setDateRange}
-        sentiment={sentiment}
-        onSentimentChange={setSentiment}
-        agent={agent}
-        onAgentChange={setAgent}
-        status={status}
-        onStatusChange={setStatus}
-        agents={agents}
-      />
+      <Suspense fallback={<FiltersBarSkeleton />}>
+        <FiltersBar agents={agents} />
+      </Suspense>
 
-      <DataTable columns={columns} data={filteredCalls} />
-    </div >
+      <DataTable columns={columns} data={calls} />
+    </div>
   );
 }

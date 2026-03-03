@@ -1,5 +1,8 @@
 "use client";
 
+import { useState, useRef, useTransition, useCallback, useEffect } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -13,47 +16,88 @@ import { DateRange } from "react-day-picker";
 import { Sentiment, CallStatus } from "@/types";
 
 interface FiltersBarProps {
-  search: string;
-  onSearchChange: (value: string) => void;
-  dateRange: DateRange | undefined;
-  onDateRangeChange: (range: DateRange | undefined) => void;
-  sentiment: Sentiment | "all";
-  onSentimentChange: (value: Sentiment | "all") => void;
-  agent: string;
-  onAgentChange: (value: string) => void;
-  status: CallStatus | "all";
-  onStatusChange: (value: CallStatus | "all") => void;
   agents: string[];
 }
 
-export function FiltersBar({
-  search,
-  onSearchChange,
-  dateRange,
-  onDateRangeChange,
-  sentiment,
-  onSentimentChange,
-  agent,
-  onAgentChange,
-  status,
-  onStatusChange,
-  agents,
-}: FiltersBarProps) {
+export function FiltersBar({ agents }: FiltersBarProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+
+  const searchParam = searchParams.get("search") ?? "";
+  const dateFrom = searchParams.get("dateFrom");
+  const dateTo = searchParams.get("dateTo");
+  const sentimentParam = (searchParams.get("sentiment") ?? "all") as Sentiment | "all";
+  const agentParam = searchParams.get("agent") ?? "all";
+  const statusParam = (searchParams.get("status") ?? "all") as CallStatus | "all";
+
+  const [localSearch, setLocalSearch] = useState(searchParam);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync local search if URL changes externally (e.g., browser back/forward)
+  useEffect(() => {
+    setLocalSearch(searchParam);
+  }, [searchParam]);
+
+  const dateRange: DateRange | undefined = dateFrom
+    ? {
+        from: new Date(dateFrom + "T00:00:00"),
+        to: dateTo ? new Date(dateTo + "T00:00:00") : undefined,
+      }
+    : undefined;
+
+  const updateParams = useCallback(
+    (updates: Record<string, string | undefined>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === undefined || value === "all" || value === "") {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      }
+      const query = params.toString();
+      startTransition(() => {
+        router.push(pathname + (query ? "?" + query : ""));
+      });
+    },
+    [pathname, router, searchParams]
+  );
+
+  const handleSearchChange = (value: string) => {
+    setLocalSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      updateParams({ search: value || undefined });
+    }, 400);
+  };
+
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    updateParams({
+      dateFrom: range?.from ? format(range.from, "yyyy-MM-dd") : undefined,
+      dateTo: range?.to ? format(range.to, "yyyy-MM-dd") : undefined,
+    });
+  };
+
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div
+      className="flex flex-wrap items-center gap-3"
+      style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 0.2s" }}
+    >
       <Input
         placeholder="Search calls..."
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
+        value={localSearch}
+        onChange={(e) => handleSearchChange(e.target.value)}
         className="w-[200px]"
       />
       <DateRangePicker
         dateRange={dateRange}
-        onDateRangeChange={onDateRangeChange}
+        onDateRangeChange={handleDateRangeChange}
       />
       <Select
-        value={sentiment}
-        onValueChange={(v) => onSentimentChange(v as Sentiment | "all")}
+        value={sentimentParam}
+        onValueChange={(v) => updateParams({ sentiment: v })}
       >
         <SelectTrigger className="w-[140px]">
           <SelectValue placeholder="Sentiment" />
@@ -65,10 +109,7 @@ export function FiltersBar({
           <SelectItem value="negative">Negative</SelectItem>
         </SelectContent>
       </Select>
-      <Select
-        value={agent}
-        onValueChange={onAgentChange}
-      >
+      <Select value={agentParam} onValueChange={(v) => updateParams({ agent: v })}>
         <SelectTrigger className="w-[160px]">
           <SelectValue placeholder="Agent" />
         </SelectTrigger>
@@ -82,8 +123,8 @@ export function FiltersBar({
         </SelectContent>
       </Select>
       <Select
-        value={status}
-        onValueChange={(v) => onStatusChange(v as CallStatus | "all")}
+        value={statusParam}
+        onValueChange={(v) => updateParams({ status: v })}
       >
         <SelectTrigger className="w-[140px]">
           <SelectValue placeholder="Status" />
