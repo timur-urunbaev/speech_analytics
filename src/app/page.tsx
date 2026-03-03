@@ -90,6 +90,6 @@ export default function DashboardPage() {
       />
 
       <DataTable columns={columns} data={filteredCalls} />
-    </div>
+    </div >
   );
 }

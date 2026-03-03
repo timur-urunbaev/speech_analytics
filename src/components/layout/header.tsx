@@ -21,7 +21,7 @@ export function Header() {
           <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
           <line x1="12" x2="12" y1="19" y2="22" />
         </svg>
-        <span className="text-lg font-semibold">Speech Analytics</span>
+        <span className="text-lg font-semibold">Речевая аналитика</span>
       </div>
       <Avatar className="h-8 w-8">
         <AvatarFallback className="text-xs">AD</AvatarFallback>

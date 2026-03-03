@@ -45,30 +45,30 @@ function SortableHeader({
 export const columns: ColumnDef<CallRecord>[] = [
   {
     accessorKey: "dateTime",
-    header: ({ column }) => <SortableHeader column={column} label="Date / Time" />,
+    header: ({ column }) => <SortableHeader column={column} label="Дата / Время" />,
     cell: ({ row }) => format(new Date(row.getValue("dateTime")), "MMM d, yyyy HH:mm"),
   },
   {
     accessorKey: "agentName",
-    header: ({ column }) => <SortableHeader column={column} label="Agent" />,
+    header: ({ column }) => <SortableHeader column={column} label="Оператор" />,
   },
   {
     accessorKey: "customerName",
-    header: ({ column }) => <SortableHeader column={column} label="Customer" />,
+    header: ({ column }) => <SortableHeader column={column} label="Клиент" />,
   },
   {
     accessorKey: "duration",
-    header: ({ column }) => <SortableHeader column={column} label="Duration" />,
+    header: ({ column }) => <SortableHeader column={column} label="Длительность" />,
     cell: ({ row }) => formatDuration(row.getValue("duration")),
   },
   {
     accessorKey: "sentiment",
-    header: "Sentiment",
+    header: "Эмоции",
     cell: ({ row }) => <SentimentBadge sentiment={row.getValue("sentiment")} />,
   },
   {
     accessorKey: "topics",
-    header: "Topics",
+    header: "Причина",
     cell: ({ row }) => {
       const topics: string[] = row.getValue("topics");
       return (
@@ -84,7 +84,7 @@ export const columns: ColumnDef<CallRecord>[] = [
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: "Статус",
     cell: ({ row }) => <StatusBadge status={row.getValue("status")} />,
   },
   {

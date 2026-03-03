@@ -4,11 +4,11 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboardIcon },
-  { label: "Calls", href: "#", icon: PhoneIcon },
-  { label: "Agents", href: "#", icon: UsersIcon },
-  { label: "Reports", href: "#", icon: BarChartIcon },
-  { label: "Settings", href: "#", icon: SettingsIcon },
+  { label: "Дашборд", href: "/", icon: LayoutDashboardIcon },
+  { label: "Звонки", href: "#", icon: PhoneIcon },
+  { label: "Операторы", href: "#", icon: UsersIcon },
+  { label: "Отчеты", href: "#", icon: BarChartIcon },
+  { label: "Настройки", href: "#", icon: SettingsIcon },
 ];
 
 export function Sidebar() {
